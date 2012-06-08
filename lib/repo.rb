@@ -18,7 +18,7 @@ class Repo
     uri  = URI.parse("https://api.github.com/repos/#{@user}/#{@repo}#{path}?#{query}")
 
     request = Net::HTTP::Get.new(uri.request_uri)
-    request.basic_auth("jeffsu", File.read('/home/jeffsu/password').strip)
+    request.basic_auth("jeffsu", File.read('/Users/jeffsu/password').strip)
     response = @http.request(request)
     if response.code == '200'
       JSON.parse(response.body)
@@ -67,9 +67,10 @@ class Repo
         issue.update_attributes(data)
       else
         puts "Inserting Issue: #{data['number']}"
-        issue.repo = "#{@user}/#{@repo}"
         issue = Issue.new(data)
       end
+
+      issue.repo ||= "#{@user}/#{@repo}"
 
       retrieve_comments!(issue)
       issue.save
