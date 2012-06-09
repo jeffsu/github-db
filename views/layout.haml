@@ -5,8 +5,9 @@
     %script{ :type => 'text/javascript', :src => '/jquery.js' }
     %script{ :type => 'text/javascript', :src => '/jquery-ui.js' }
     %script{ :type => 'text/javascript', :src => '/mochiscript.js' }
+    %script{ :type => 'text/javascript', :src => '/jade.js' }
     %script{ :type => 'text/javascript', :src => '/ms/app' }
     
-  %body
-    .container
+  %body{ :style => 'padding-top: 60px' }
+    .container-fluid
       =yield

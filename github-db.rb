@@ -7,6 +7,6 @@ Mongoid.configure do |config|
   config.master = Mongo::Connection.new.db(name)
 end
 
-%W| document integer repo issue comment |.each do |file|
+%W| document integer repo issue comment milestone |.each do |file|
   require "#{dir}/lib/#{file}"
 end

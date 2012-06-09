@@ -1,30 +1,13 @@
-.pivoter.form.form-horizontal
-  %button.btn{ :onclick => 'pivoter.pivotMilestone()' } Milestone
-  %button.btn{ :onclick => 'pivoter.pivotLabels()' } Labels
-  
-%ol.issue-list.unstyled
-%ol.milestone-list
-
-.templates(style="display: none")
-  %li.milestone
-    %h5.title
-    %ol.issues.unstyled
-  %li.comment
-  %li.issue 
-    %h5.title
-    %ol.comments.unstyled
-    .labels(style="display: none")
-
+- if session[:token]
+  %form.form.form-vertical(action="/set_repo" method="post")
+    %label User/Organization 
+    %input(name="user")
     
-#data{ :data => Issue.where(state: 'open').to_json }
-%style
-  :sass
-    .comments
-      display: none
-:javascript
-  var app = null;
-  var pivoter = null;
-  $(function () {
-    app = new App();
-    pivoter = new Pivoter();
-  });
+    %label Repo
+    %input(name="repo")
+
+    %br/
+    %button.btn Go
+- else
+  %pre= session.inspect
+  %a(href="/auth/github") Authorize

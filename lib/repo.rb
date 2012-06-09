@@ -6,9 +6,11 @@ require 'cgi'
 
 
 class Repo 
-  def initialize
-    @user = "Factual"
-    @repo = "front"
+  def initialize(token, user, repo)
+    @repo = repo 
+    @user = user
+
+    @token = token
     @http = Net::HTTP.new("api.github.com", 443)
     @http.use_ssl = true
   end
@@ -18,8 +20,25 @@ class Repo
     uri  = URI.parse("https://api.github.com/repos/#{@user}/#{@repo}#{path}?#{query}")
 
     request = Net::HTTP::Get.new(uri.request_uri)
-    request.basic_auth("jeffsu", File.read('/Users/jeffsu/password').strip)
+    request['Authorization'] = "token #{@token}"
+
     response = @http.request(request)
+
+    if response.code == '200'
+      JSON.parse(response.body)
+    else 
+      raise response.body 
+    end
+  end
+
+  def post(path, params={})
+    uri  = URI.parse("https://api.github.com/repos/#{@user}/#{@repo}#{path}")
+
+    request = Net::HTTP::Post.new(uri.request_uri)
+    request.body = params.to_json
+    request['Authorization'] = "token #{@token}"
+    response = @http.request(request)
+
     if response.code == '200'
       JSON.parse(response.body)
     else 
@@ -31,22 +50,29 @@ class Repo
     time.iso8601(10)
   end
 
+  def populate!
+    retrieve!
+  end
+
   def retrieve!
     time  = Issue.last_updated 
+
+    puts "Retrieving Issues"
 
     count = nil
     page  = 0
     while !count || count >= 25 
       count = retrieve_issues!(time, page += 1, 'open')
-      puts "Paging #{page} of 'open' count: #{count}"
+      puts "Paging issues #{page} of 'open' count: #{count}"
     end
 
     count = nil 
     page  = 0
     while !count || count >= 25
       count = retrieve_issues!(time, page += 1, 'closed')
-      puts "Paging #{page} of 'closed'"
+      puts "Paging issues #{page} of 'closed' #{count}"
     end
+
   end
 
   def retrieve_issues!(time=nil, page=1, state=nil)
@@ -54,40 +80,43 @@ class Repo
 
     rows = get("/issues", { since: time_str(time), page: page, state: state || 'open' })
     rows.each do |data|
-      data  = Issue.sanitize_hash(data)
-      issue = Issue.get(data)
-
-      if issue && issue.updated_string == data['updated_at']
-        puts "Skipping: #{issue.number}"
-        next
-      end
-
-      if issue
-        puts "Updating Issue: #{issue.number}"
-        issue.update_attributes(data)
-      else
-        puts "Inserting Issue: #{data['number']}"
-        issue = Issue.new(data)
-      end
-
-      issue.repo ||= "#{@user}/#{@repo}"
-
-      retrieve_comments!(issue)
-      issue.save
+      upsert_issue(data)
     end
 
     return rows.count
   end
 
-  def upsert(klass, data) 
-    id = data['number'] || data['id']
-    if obj
-      puts "Updating #{klass.to_s} #{id}" 
-      obj.update_attributes(data)
-      return obj
+  def repo_name
+    return "#{@user}/#{@repo}"
+  end
+
+  def upsert_issue(data) 
+    mdata = data['milestone']
+
+    Issue.sanitize_hash!(data)
+    issue = Issue.get(data)
+
+    if issue
+      puts "Updating Issue: #{issue.number}"
+      issue.update_attributes(data)
     else
-      puts "Inserting #{klass.to_s} #{id}"
-      return self.create(data)
+      puts "Inserting Issue: #{data['number']}"
+      issue = Issue.new(data)
+    end
+
+    issue.repo ||= repo_name
+
+    retrieve_comments!(issue)
+    issue.save
+
+    if mdata
+      unless issue.milestone
+        puts "Inserting milestone"
+        puts mdata.inspect
+        m = Milestone.new(mdata)
+        m.repo = repo_name
+        m.save
+      end
     end
   end
 
