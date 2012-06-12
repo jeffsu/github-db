@@ -1,35 +1,54 @@
 .row-fluid.form.form-horizontal
-  .span4
-    .pivoter
-      %button.btn{ :onclick => 'app.pivotByMilestones()' } Milestone
-      %input{ :text => '', :onblur => 'app.pivotByLabels(this.value.split(","))' }
+  .span10
+    .views
+      %table.milestone-list.table.table-bordered
+      %table.label-list.table.table-bordered
       
-  .span4
-    .filters
-      %select.state
+  .span2
+    .filters.well.form-vertical
+      %h5 Filters
+      Issues:
+      %select.state.input-small
         %option{ :value => 'open', :selected => true } Open
         %option{ :value => 'closed' } Closed
         %option{ :value => '' } Both
-  .span4
-    Show Empty Milestones?
-    %input{ :type => 'checkbox', :onclick => 'app.toggleEmptyMilestones(this.checked)' }
+        
+      Milestones:
+      %table.milestone-filters
+      
+      Labels:
+      %table.label-filters
+
+        
+    %ol.nav.nav-tabs
+      %li.active
+        %a{ :onclick => "app.pivotByMilestones()" } Milestones
+      %li
+        %a{ :onclick => "app.pivotByLabels()" } Labels
+      
+    .nav-forms
+      .hide.milestone-form
+        Show Empty Milestones?
+        %input{ :type => 'checkbox', :onclick => 'app.toggleEmptyMilestones(this.checked)' }
+
+      .hide
+        Comma delimited list of labels
+        %input.label-txt{ :type => 'text', :onblur => 'app.pivotByLabels()' }
+      
     
-  %br
-  %br
   
-.row-fluid
-  .views
-    %table.label-list.table.table-bordered
-    %table.milestone-list.table.table-bordered
 
 #data{ :issues => Issue.where(state: 'open').to_json, :milestones => Milestone.all.to_json }
 %style
   :sass
     .comments
       display: none
+    th
+      background-color: #eee
 :javascript
   var app = null;
   var pivoter = null;
   $(function () {
     app = new App();
+    app.pivotByMilestones();
   });

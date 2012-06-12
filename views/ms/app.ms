@@ -12,28 +12,39 @@ class App {
     this.$milestoneList = $('.views > .milestone-list');
     this.$labelList     = $('.views > .label-list');
 
+    $('.nav-tabs').delegate('li a', 'click', #{
+      self.tab($(this).closest('li').prevAll().length);
+    });
+
     this.pivotByMilestones();
+    this.toggleEmptyMilestones(false);
   }
 
-  function pivotByLabels(labels) {
-    this.$labelList.show().siblings().hide();
+  function pivotByLabels() {
+    var txt = $('.label-txt').val();
+    var labels = txt ? txt.split(',') : [];
+    this.tab(1);
+
     var storage = this.storage;
     var shown = {};
+
     foreach (var name in labels) {
       var label = storage.labels[name];
       shown[name] = true;
-      console.log(label);
-      if (label) {
-        label.show();
-        label.pivot();
-      } else {
-        label.hide();
-      }
+      label.pivot();
+      label.show();
     }
 
     for (var k in storage.labels) {
-      if (!shown[k]) storage.labels[k].hide();
+      var label = storage.labels[k]; 
+      if (!shown[k]) label.hide();
     }
+  }
+
+  function tab(n) {
+    $('.nav li').removeClass('active').eq(n).addClass('active');
+    $('.nav-forms>div').addClass('hide').eq(n).removeClass('hide');
+    $('.views>table').eq(n).show().siblings().hide();
   }
 
   function addIssue(issue) {
@@ -45,10 +56,13 @@ class App {
   }
 
   function toggleEmptyMilestones(showEmpty) {
-    this.storage.milestones.forEach(#{ if ($1.isEmpty()) showEmpty ? $1.show() : $1.hide(); });
+    this.storage.milestones.forEach(#{ 
+      if ($1.isEmpty()) showEmpty ? $1.show() : $1.hide(); 
+    });
   }
 
   function pivotByMilestones() {
+    this.tab(0);
     this.$milestoneList.show().siblings().hide();
     this.storage.milestones.forEach(#{ $1.pivot() });
   }
@@ -58,24 +72,30 @@ class Label {
   private {
     var templateTxt = <<END
       thead 
-        tr.title 
-          th(colspan=2)= name
+        tr
+          th(colspan=2).title= name
       tbody.issues-body
         tr.empty
           td(colspan=2) Empty
     END
 
     var template = jade.compile(templateTxt);
+    var $labelList = null;
   }
  
   function initialize(name) {
+    if (!$labelList) $labelList = $('table.label-list');
+
     this.name = name;
     this.issues = [];
     var $ele = $(template(this));
-    this.$header = $($ele[0]);
-    this.$body   = $($ele[1]);
+
+    this.$header = $ele.eq(0);
+    this.$body   = $ele.eq(1);
     this.$empty  = $ele.find('.empty');
-    $('.label-list').append($ele);
+
+    $labelList.append(this.$header);
+    $labelList.append(this.$body);
 
     this.$body.sortable({
       axis: 'y',
@@ -92,7 +112,6 @@ class Label {
       ui.item.data('self').removeLabel(self);
       if (self.isEmpty()) self.$empty.show(); 
     });
-
   }
 
   function isEmpty() {
@@ -110,8 +129,11 @@ class Label {
   }
 
   function pivot() {
-    this.show();
+    $labelList.append(this.$header);
+    $labelList.append(this.$body);
+
     this.issues.forEach(#{ self.$body.append($1.$ele) });
+
     if (this.issues.length == 0) {
       this.$empty.show();
     } else {
@@ -177,7 +199,7 @@ class Milestone {
   private {
     var templateTxt = <<END
       thead 
-        tr.milestone 
+        tr.title
           th(colspan=2)= title + ' (' + due_on + ')'
       tbody.issues-body
         tr.empty
@@ -231,6 +253,12 @@ class Milestone {
     this.$body.hide();
   }
 
+  function show() {
+    this.$header.show();
+    this.$body.show();
+  }
+
+
   function saveOrder() {
     var ids = [];
     this.$body.find('.issue').each(#{
@@ -264,7 +292,6 @@ class Milestone {
      this.$empty.show();
     }
   }
-
 }
 
 class Issue {
